@@ -19,10 +19,21 @@ Item {
   property int darkFrom: 19
   property int checkIntervalMinutes: 10
 
+  // auto follows the schedule; light and dark pin the theme. Persisted in the
+  // state directory and settable from the bar widget, IPC, or by editing the
+  // file.
+  property string mode: "auto"
+  readonly property var knownModes: ["auto", "light", "dark"]
+  readonly property string modePath: home + "/.local/state/omarchy/theme-sync/mode"
+
   property string currentTheme: ""
   property int lastCheckedHour: -1
 
-  readonly property string wantedTheme: isDaytime(lastCheckedHour) ? lightTheme : darkTheme
+  readonly property string wantedTheme: {
+    if (mode === "light") return lightTheme
+    if (mode === "dark") return darkTheme
+    return isDaytime(lastCheckedHour) ? lightTheme : darkTheme
+  }
   // Only the configured pair is switched. Anything else -- a theme picked by
   // hand, or a third theme entirely -- is left alone.
   readonly property bool managingCurrentTheme: currentTheme === lightTheme || currentTheme === darkTheme
@@ -41,13 +52,17 @@ Item {
 
   // Applies the theme the schedule asks for, and nothing else: no match, no
   // change, and at most one `omarchy-theme-set` in flight. Timer ticks pass no
-  // argument so a theme picked by hand survives; an explicit action (config
-  // saved, applyNow, config deleted) passes force to sync immediately.
+  // argument and do nothing while the mode is pinned; an explicit action
+  // (config saved, mode set, applyNow) passes force to sync immediately.
   function apply(force) {
     lastCheckedHour = new Date().getHours()
 
-    if (!force && !managingCurrentTheme)
-      return
+    if (!force) {
+      if (mode !== "auto")
+        return
+      if (!managingCurrentTheme)
+        return
+    }
     if (currentTheme === wantedTheme)
       return
     if (applyProcess.running)
@@ -55,6 +70,26 @@ Item {
 
     applyProcess.command = ["bash", "-lc", "omarchy-theme-set " + shellQuote(wantedTheme)]
     applyProcess.running = true
+  }
+
+  function setMode(value) {
+    var next = String(value || "").trim().toLowerCase()
+    if (knownModes.indexOf(next) === -1)
+      return
+
+    mode = next
+    modeFile.setText(mode + "\n")
+    apply(true)
+  }
+
+  function loadMode(raw) {
+    var next = String(raw || "").trim().toLowerCase()
+    if (knownModes.indexOf(next) === -1)
+      return
+
+    mode = next
+    // A pinned mode is re-asserted on login; auto just syncs the schedule.
+    apply(mode !== "auto")
   }
 
   function resetConfig() {
@@ -113,6 +148,15 @@ Item {
     onLoaded: root.currentTheme = String(text() || "").trim()
   }
 
+  FileView {
+    id: modeFile
+    path: root.modePath
+    watchChanges: true
+    printErrors: false
+    onFileChanged: reload()
+    onLoaded: root.loadMode(text())
+  }
+
   Timer {
     interval: Math.max(1, root.checkIntervalMinutes) * 60000
     repeat: true
@@ -136,6 +180,7 @@ Item {
 
     function status(): string {
       return JSON.stringify({
+        mode: root.mode,
         currentTheme: root.currentTheme,
         wantedTheme: root.wantedTheme,
         hour: root.lastCheckedHour,
@@ -146,6 +191,17 @@ Item {
         checkIntervalMinutes: root.checkIntervalMinutes,
         managing: root.managingCurrentTheme
       })
+    }
+
+    function setMode(value: string): string {
+      root.setMode(value)
+      return root.mode
+    }
+
+    function cycleMode(): string {
+      var order = root.knownModes
+      root.setMode(order[(order.indexOf(root.mode) + 1) % order.length])
+      return root.mode
     }
 
     function applyNow(): string {
