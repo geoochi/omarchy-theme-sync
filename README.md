@@ -7,6 +7,11 @@ hour on a timer and, when the current theme is the configured light or dark
 theme, hands it to `omarchy theme set`. Nothing else is touched — no wallpaper
 of its own, no systemd unit, no second Quickshell process.
 
+## Requirements
+
+- Omarchy 4 (Quattro) or newer, with the Quickshell plugin system
+- `omarchy theme set`, shipped with Omarchy — nothing else
+
 ## Install
 
 ```sh
