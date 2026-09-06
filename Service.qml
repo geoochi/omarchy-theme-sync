@@ -46,14 +46,16 @@ Item {
     return Math.min(23, Math.max(0, Math.round(value)))
   }
 
-  function shellQuote(value) {
-    return "'" + String(value).replace(/'/g, "'\\''") + "'"
-  }
-
   // Applies the theme the schedule asks for, and nothing else: no match, no
   // change, and at most one `omarchy-theme-set` in flight. Timer ticks pass no
   // argument and do nothing while the mode is pinned; an explicit action
   // (config saved, mode set, applyNow) passes force to sync immediately.
+  //
+  // A call that lands while omarchy-theme-set is still running its post-theme
+  // hooks is remembered (pendingForce) and re-run when the process exits, so
+  // rapid clicks are never silently dropped.
+  property bool pendingForce: false
+
   function apply(force) {
     lastCheckedHour = new Date().getHours()
 
@@ -63,12 +65,20 @@ Item {
       if (!managingCurrentTheme)
         return
     }
+
+    if (applyProcess.running) {
+      // The wanted theme can still change while omarchy-theme-set runs its
+      // hooks (the current theme only flips partway through), so every call
+      // that lands mid-run registers itself and is re-evaluated on exit.
+      pendingForce = pendingForce || force === true
+      return
+    }
     if (currentTheme === wantedTheme)
       return
-    if (applyProcess.running)
-      return
 
-    applyProcess.command = ["bash", "-lc", "omarchy-theme-set " + shellQuote(wantedTheme)]
+    // Exec omarchy-theme-set directly: no wrapping bash login shell, whose
+    // profile sourcing alone costs a few hundred milliseconds per switch.
+    applyProcess.command = ["/usr/bin/omarchy-theme-set", wantedTheme]
     applyProcess.running = true
   }
 
@@ -171,6 +181,14 @@ Item {
 
   Process {
     id: applyProcess
+    onExited: function() {
+      // Whatever wanted to switch while this was running gets its turn now;
+      // apply() re-reads the current mode and theme, so it is a no-op when
+      // nothing is pending.
+      var force = root.pendingForce
+      root.pendingForce = false
+      root.apply(force)
+    }
   }
 
   Component.onCompleted: root.apply()
