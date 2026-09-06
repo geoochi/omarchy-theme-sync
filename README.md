@@ -2,6 +2,8 @@
 
 Switch between a light and a dark Omarchy theme on a local-time schedule.
 
+https://github.com/user-attachments/assets/438ea4f7-357e-43eb-a207-735a6291c1ba
+
 The plugin runs inside Omarchy Shell as a headless `service`: it reads the local
 hour on a timer and, when the current theme is the configured light or dark
 theme, hands it to `omarchy theme set`. Nothing else is touched — no wallpaper
