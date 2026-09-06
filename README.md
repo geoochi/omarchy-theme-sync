@@ -48,6 +48,8 @@ picked up on the next check.
   and the schedule takes over again.
 - A theme you set by hand inside the pair survives until the next check, then
   the schedule wins. That is the same contract the shell script version had.
+- Saving or deleting `config.json` is an explicit action, so it syncs
+  immediately — even over a theme you picked by hand.
 - Nothing happens when the theme is already the right one, and only one
   `omarchy theme set` runs at a time.
 

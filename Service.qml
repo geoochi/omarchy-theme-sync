@@ -40,11 +40,13 @@ Item {
   }
 
   // Applies the theme the schedule asks for, and nothing else: no match, no
-  // change, and at most one `omarchy-theme-set` in flight.
-  function apply() {
+  // change, and at most one `omarchy-theme-set` in flight. Timer ticks pass no
+  // argument so a theme picked by hand survives; an explicit action (config
+  // saved, applyNow, config deleted) passes force to sync immediately.
+  function apply(force) {
     lastCheckedHour = new Date().getHours()
 
-    if (!managingCurrentTheme)
+    if (!force && !managingCurrentTheme)
       return
     if (currentTheme === wantedTheme)
       return
@@ -53,6 +55,15 @@ Item {
 
     applyProcess.command = ["bash", "-lc", "omarchy-theme-set " + shellQuote(wantedTheme)]
     applyProcess.running = true
+  }
+
+  function resetConfig() {
+    lightTheme = "catppuccin-latte"
+    darkTheme = "tokyo-night"
+    lightFrom = 7
+    darkFrom = 19
+    checkIntervalMinutes = 10
+    apply(true)
   }
 
   function loadConfig(raw) {
@@ -77,7 +88,7 @@ Item {
     if (typeof parsed.checkIntervalMinutes === "number" && parsed.checkIntervalMinutes >= 1)
       checkIntervalMinutes = Math.round(parsed.checkIntervalMinutes)
 
-    apply()
+    apply(true)
   }
 
   FileView {
@@ -87,6 +98,8 @@ Item {
     printErrors: false
     onFileChanged: reload()
     onLoaded: root.loadConfig(text())
+    // A deleted config falls back to the defaults on the next read.
+    onLoadFailed: root.resetConfig()
   }
 
   FileView {
@@ -136,7 +149,7 @@ Item {
     }
 
     function applyNow(): string {
-      root.apply()
+      root.apply(true)
       return root.wantedTheme
     }
 
