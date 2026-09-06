@@ -1,0 +1,69 @@
+# Theme Sync
+
+Switch between a light and a dark Omarchy theme on a local-time schedule.
+
+The plugin runs inside Omarchy Shell as a headless `service`: it reads the local
+hour on a timer and, when the current theme is the configured light or dark
+theme, hands it to `omarchy theme set`. Nothing else is touched — no wallpaper
+of its own, no systemd unit, no second Quickshell process.
+
+## Install
+
+```sh
+omarchy plugin add https://github.com/geoochi/omarchy-theme-sync.git --enable
+```
+
+## Configure
+
+Defaults are a light theme from 07:00 and a dark one from 19:00. Override any of
+them in `~/.config/omarchy/theme-sync/config.json`:
+
+```json
+{
+  "lightTheme": "catppuccin-latte",
+  "darkTheme": "tokyo-night",
+  "lightFrom": 7,
+  "darkFrom": 19,
+  "checkIntervalMinutes": 10
+}
+```
+
+The file is watched, so saving it applies the new schedule immediately. Deleting
+it falls back to the defaults above. A `config.json` created after the shell
+already started is picked up on the next check rather than instantly.
+
+Times are local: the hour comes from the system clock in the timezone the
+session is running in, so changing timezone (or crossing a DST boundary) is
+picked up on the next check.
+
+## How it decides
+
+- Outside the configured pair — a theme you picked by hand, or a third theme —
+  the current theme is never replaced. Switch back to either half of the pair
+  and the schedule takes over again.
+- A theme you set by hand inside the pair survives until the next check, then
+  the schedule wins. That is the same contract the shell script version had.
+- Nothing happens when the theme is already the right one, and only one
+  `omarchy theme set` runs at a time.
+
+## Usage
+
+```sh
+omarchy-shell theme-sync status     # current state as JSON
+omarchy-shell theme-sync applyNow   # apply the theme for this hour right now
+omarchy-shell theme-sync reload     # re-read the config and the current theme
+```
+
+## Remove
+
+```sh
+omarchy plugin remove io.github.geoochi.theme-sync
+```
+
+Removing the plugin leaves `~/.config/omarchy/theme-sync/config.json` in place so
+a later reinstall reuses your schedule. Delete it separately if you do not want
+that.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

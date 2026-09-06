@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.geoochi.theme-sync",
+  "name": "Theme Sync",
+  "version": "1.0.0",
+  "author": "geoochi",
+  "license": "MIT",
+  "description": "Switch between a light and a dark Omarchy theme on a local-time schedule.",
+  "repository": "https://github.com/geoochi/omarchy-theme-sync",
+  "kinds": [
+    "service"
+  ],
+  "entryPoints": {
+    "service": "Service.qml"
+  }
+}
