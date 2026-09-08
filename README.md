@@ -19,6 +19,8 @@ The mode survives restarts and is re-asserted on login. While pinned, the
 schedule is suspended: switch themes freely, and the plugin leaves them alone
 until you click back to Auto.
 
+![Theme Sync](preview.png)
+
 ## Requirements
 
 - Omarchy 4 (Quattro) or newer, with the Quickshell plugin system
